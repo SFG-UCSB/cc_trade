@@ -11,6 +11,9 @@ library(tidyverse)
 pathstart <- '~/Box/PackardCC/'
 pathstartglobal <- '~/Box/Global Climate Project/'
 
+## Load spatial data from Jorge
+load('~/Box/Global Climate Project/input_files/Data prep/Spatial data/UpdateResults_11_2017.RData')
+
 ## read in data
 rratios26 <- readRDS(paste0(pathstart, "range_ratio_data/rratios_xsp_xyr_xeez_26.RDS"))
 rratios45 <- readRDS(paste0(pathstart, "range_ratio_data/rratios_xsp_xyr_xeez_45.RDS"))
@@ -27,62 +30,134 @@ outputs01 <- readRDS(paste0(pathstart, 'Outputs/Results/Shift1n/cutoff01/global_
 ## Read in compressed high res map
 map_highres <- st_read(dsn = paste0(pathstart, "plot_data/World_EEZ_v8_20140228/Simplified_high_res"), layer = "simpl_high_res_map_2014") ## high resolution
 
-## Calculate total K for each species 
-## function to calculate EEZ NPV under different management scenarios
-calc_k_eez <- function(spdf, outputdf, threshold) {
-  
-  spdf <- rratiosdf
-  outputdf <- outputs01
-  threshold <- 0.01
-  
-  ## make some changes to the rratios dataframe
-  tmp1 <- spdf %>%
-    rename(SciName = species) %>%
-    mutate(adj_rratio = ifelse(r < threshold, 0, r)) 
-  
-  ## Calculate total K for each species in each years
-  outputtmp1 <- outputdf %>%
-    filter(discount_rate == 0.00,
-           cc_presence == "climate_change",
-           scenario == "Full Adaptation") %>%
-    select(RCP, SciName, SpeciesID,  CommName, year, K) %>%
-    group_by(RCP, SciName, SpeciesID, CommName, year) %>%
-    summarise(total_K = sum(K)) %>%
-    ungroup()
-  
-  ## Join outputs with range dataframe
-  outputtmp2 <- left_join(outputtmp1, tmp1) %>%
-    mutate(eez_prop_K = total_disc_profit * adj_rratio) %>%
-    group_by(RCP, EEZID, scenario) %>%
-    summarize(eez_npv = sum(eez_prop_profit, na.rm = T)) %>%
-    ungroup()
-  
-  outputfull <- outputtmp3 %>%
-    filter(scenario == "Full Adaptation") %>%
-    rename(opt_npv_cc = eez_npv) %>%
-    select(RCP, EEZID, opt_npv_cc)
-  
-  outputprod <- outputtmp3 %>%
-    filter(scenario == "Productivity Only") %>%
-    rename(prod_npv_cc = eez_npv) %>%
-    select(RCP, EEZID, prod_npv_cc)
-  
-  outputtmp4 <- left_join(outputfull, outputprod) 
-  
-  outputtmp5 <- outputtmp4 %>%
-    mutate(prod_vs_opt_scaled = ifelse(prod_npv_cc == 0 & opt_npv_cc == 0, 0, (prod_npv_cc - opt_npv_cc) / opt_npv_cc), 
-           prod_vs_opt_abs = ifelse(prod_npv_cc == 0 & opt_npv_cc == 0, 0, (prod_npv_cc - opt_npv_cc))) %>%
-    select(EEZID, RCP, prod_vs_opt_scaled, prod_vs_opt_abs)
-  
-  outputtmp5$EEZID <- as.integer(outputtmp5$EEZID)
-  
-  return(outputtmp5)
-  
-}
+## Calculate change in range two ways: 1) By EEZ for each species and 2) by EEZ (total range)
+## --------------------------------------------------------------------------------------------------
 
-eez_npv_comparisondf <- calc_npv_eez(spdf = rratiosdf, outputdf = outputs01, ddrate = 0.05, threshold = 0.01) %>%
-  rename(EEZ_ID = EEZID)
+## range threshhold
+threshold <- 0.01
+  
+## make some changes to the rratios dataframe
+rratiosdf2 <- rratiosdf %>%
+  rename(SciName = species) %>%
+  mutate(adj_rratio = ifelse(r < threshold, 0, r)) ## if the ratio of range is < 1%, the adjusted range is 0
+  
+## 1) Calculate ratio of total range for each species in each EEZ
+## -------------------------------------------------------------------
+outputs01_sub <- outputs01 %>%
+  filter(discount_rate == 0.00,
+         cc_presence == "climate_change",
+         scenario == "Full Adaptation") %>%
+  select(RCP, SciName, SpeciesID,  CommName, year) %>%
+  left_join(rratiosdf2)
+  
+initial_range <- outputs01_sub %>%
+  filter(year == 2012) %>%
+  select(RCP, SpeciesID, EEZID, rangekm2, total_range, r, adj_rratio) %>%
+  rename(init_rangekm2 = rangekm2,
+         init_total_range = total_range,
+         init_r = r,
+         init_adj_rratio = adj_rratio)
 
-write.csv(eez_npv_comparisondf, paste0(pathstart, "/Outputs/eez_npv_comparisondf_082118.csv"), row.names = FALSE)
+## change in range by species by EEZ 
+sp_output <- outputs01_sub %>%
+  filter(year %in% c(2050, 2100)) %>%
+  left_join(initial_range) %>%
+  mutate(change_rrange = adj_rratio- init_adj_rratio) 
+
+## clean it up
+sp_output2 <- sp_output %>%
+  select(RCP:Country, init_adj_rratio, adj_rratio, change_rrange)
+
+
+## 2) Calculate change in range ratio for entire EEZ (sum of all ranges)
+## ------------------------------------------------------------------------------
+init_total_eez_range <- outputs01_sub %>%
+  filter(year == 2012) %>%
+  select(RCP, SpeciesID, EEZID, rangekm2) %>%
+  group_by(RCP, EEZID) %>%
+  summarise(total_range_eezkm2 = sum(rangekm2)) %>%
+  ungroup()
+
+## total range all sp 
+total_range_df <- outputs01_sub %>%
+  filter(year %in% c(2012, 2050, 2100)) %>%
+  select(RCP, SpeciesID, year, total_range) %>%
+  group_by(RCP, year) %>%
+  summarise(total_range_all_km2 = sum(total_range)) %>%
+  ungroup()
+  
+## total range all sp 2012
+total_range_all_2012_df <- total_range_df %>%
+  filter(year == 2012, 
+         RCP == "RCP26") 
+
+total_range_all_2012 <- as.numeric(total_range_all_2012_df[,3])
+
+## join the two dfs to calculate ratio for 2012
+init_rratio_df <- init_total_eez_range %>%
+  mutate(total_global_range = total_range_all_2012) %>%
+  mutate(init_rratio = total_range_eezkm2 / total_global_range) %>%
+  rename(init_range_eezkm2 = total_range_eezkm2,
+         init_total_range_all = total_global_range)
+
+## calc eez totals in 2050 and 2100
+total_eez_range <- outputs01_sub %>%
+  filter(year %in% c(2050, 2100)) %>%
+  select(RCP, SpeciesID, EEZID, year, rangekm2) %>%
+  group_by(RCP, EEZID, year) %>%
+  summarise(total_range_eezkm2 = sum(rangekm2)) %>%
+  ungroup() %>%
+  left_join(total_range_df) %>%
+  mutate(rratio = total_range_eezkm2 / total_range_all_km2)
+
+
+## join and calculate differences in r ratio
+total_range_ratios <- total_eez_range %>%
+  left_join(init_rratio_df) %>%
+  mutate(change_rrange = rratio - init_rratio)
+
+## clean it up
+total_rratios <- total_range_ratios %>%
+  select(RCP, EEZID, year, rratio, init_rratio, change_rrange)
+
+
+## Select target countries
+## (United States, Mexico, Peru, Chile, European Union, China, Myanmar, Japan, Indonesia, Philippines, Pacific Islands and Vietnam).
+## EU members: Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany,
+## Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia,
+## Slovenia, Spain, Sweden, United Kingdom
+## ---------------------------------------------------------------------------------
+
+
+head(sp_output2)
+head(total_rratios)
+
+eezid_subset <- c(160, 163, 170, 135, 138, 224, 225, 59, 71, 187, 81, 141, 145, 175, 70, 174, 179, 176, 80, 181, 184, 69, 189,
+                  68, 177, 178, 55, 57, 183, 72, 188, 58, 182, 222, 180, 227, 228, 209, 205, 210, 216, 15, 207, 9, 8, 148, 157, 
+                  212, 11, 10, 13, 12, 6, 7, 18, 17, 5, 155, 151, 153, 147, 162, 154, 156, 3, 146, 152, 19, 161)
+eu <- c(59, 71, 187, 81, 141, 145, 175, 70, 174, 179, 176, 80, 181, 184, 69, 189, 68, 177, 178, 55, 57, 183, 72, 188, 
+        58, 182, 222, 180, 227, 228)
+us <- c(160, 163, 170)
+chile <- c(225, 225)
+denmark <- c(141, 145, 175)
+portugal <- c(55, 57, 183)
+spain <- c(58, 182)
+mirconesia <- c(9, 8, 148, 157, 212, 11, 10, 13, 12)
+melanesia <- c(6, 7, 18, 17, 5)
+polynesia <- c(155, 151, 153, 147, 162, 154, 156, 3, 146, 152, 19, 161)
+
+
+## 160 = Hawaii, 163 = United Sates, 170 = Alaska, 135 = Mexico, 138 = Peru, 224 = Chile, 225 = Easter Island, 59 = Belgium,
+## 71 = Bulgaria, 187 = Croatia, 81 = Cyprus, 141 = Faeroe Islands, 145 = Greenland, 175 = Denmark, 70 = Estonia,
+## 174 = Finland, 179 = France, 176 = Germany, 80 = Greece, 181 = Ireland, 184 = Italy, 69 = Latvia, 189 = Lithuania,
+## 68 = Malta, 177 = Netherlands, 178 = Poland, 55 = Azores, 57 = Madeira, 183 = Portugal, 72 = Romania, 188 = Slovenia,
+## 58 = Canary Islands, 182 = Spain, 222 = Sweden, 180 = United Kingdom, 227 = Jersey, 228 = Guernsey, 209 = China,
+## 205 = Myanmar, 210 = Japan, 216 = Indonesia, 15 = Philippines, 207 = Vietnam, 9 = Mirconesia, 8 = Palau, 148 = Line group,
+## 157 = Phoenix grup, 212 = Kiribati, 11 = Marshall Islands, 10 = Nauru, 6 = Vanuatu, 7 = Solomon Islands, 18 = Fiji,
+## 17 = Papau New Guinea, 5 = New Caledonia, 155 = Tonga, 151 = American Somoa, 153 = Cook Islands, 147 = French Polynesia, 
+## 162 = New Zealand, 154 = Niue, 156 = Tokelau, 3 = Norfolk Island, 146 = Pitcairn, 152 = Samoa, 19 = Tuvalu, 161 = Wallis and Futuna,
+## 13 = Northern Mariana Islands and Guam, 12 = Wake Island
+  
+ 
 
 
