@@ -116,9 +116,44 @@ total_range_ratios <- total_eez_range %>%
   left_join(init_rratio_df) %>%
   mutate(change_rrange = rratio - init_rratio)
 
+id_df <- EEZ_HS_ids %>%
+  rename(EEZID = EEZ_ID) %>%
+  select(EEZID: Sovereign)
+  
 ## clean it up
 total_rratios <- total_range_ratios %>%
-  select(RCP, EEZID, year, rratio, init_rratio, change_rrange)
+  select(RCP, EEZID, year, rratio, init_rratio, change_rrange) %>%
+  left_join(id_df) %>%
+  select(RCP, EEZID, EEZ, Country, Sovereign, year:change_rrange)
+  
+
+## Check out what's happening in Peru to make sure this all makes sense
+## ------------------------------------------------------------------------
+sp_output_pe <- sp_output %>%
+  filter(EEZID == 138,
+         year %in% c(2100),
+         adj_rratio > 0 & init_adj_rratio > 0) %>%
+  group_by(Country) %>%
+  summarise(sum_range = sum(rangekm2),
+            sum_all_2100 = sum(total_range),
+            sum_init_range = sum(init_rangekm2),
+            sum_all_init = sum(init_total_range)) %>%
+  ungroup()
+          
+## Thoughts
+## A few things going on here. The % of total range of a stock at any given year can be different if the stock is shifting.
+## Another thing, however, is that the stock may still be in the EEZ (let's say 100%), but it shrinks (or grows). This
+## is not a transboundary issue in that the resource is moving to another country, but that the available resource is
+## shrinking (or growing) (i.e. productiivity issue.).
+## Also, of course, both could happen.
+## There are small differences in total range % even though range for all stocks in Peru for example are shrinking, and I
+## believe this is because the overall range is also shrinking. 
+## --> Maybe the denominator should be initial range?
+## How to show both issues?
+## What do we want to show for the short slide deck with EDF?
+
+
+
 
 
 ## Select target countries
