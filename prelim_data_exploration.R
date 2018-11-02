@@ -10,6 +10,7 @@ library(tidyverse)
 ## Directory paths
 pathstart <- '~/Box/PackardCC/'
 pathstartglobal <- '~/Box/Global Climate Project/'
+pscctrade <- '~/Box/SFG Centralized Resources/Projects/cc_trade/'
 
 ## Load spatial data from Jorge
 load('~/Box/Global Climate Project/input_files/Data prep/Spatial data/UpdateResults_11_2017.RData')
@@ -67,6 +68,7 @@ delta_k_df <- k_df %>%
   mutate(delta_k = eez_k - eez_k0,
          delta_k_r = delta_k / eez_k0)
 
+write_csv(delta_k_df, paste0(pscctrade, "data/sp_delta_k_df.csv"))
 
 ## now for each eez
 delta_k_eez_df <- k_df %>%
@@ -78,6 +80,50 @@ delta_k_eez_df <- k_df %>%
   ungroup() %>%
   mutate(delta_k_eez = total_eez_k - total_eez_k0,
          detta_k_eez_r = delta_k_eez / total_eez_k0)
+
+
+write_csv(delta_k_df, paste0(pscctrade, "data/sp_delta_k_df.csv"))
+
+
+
+
+## Select target countries
+## (United States, Mexico, Peru, Chile, European Union, China, Myanmar, Japan, Indonesia, Philippines, Pacific Islands and Vietnam).
+## EU members: Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany,
+## Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia,
+## Slovenia, Spain, Sweden, United Kingdom
+## ---------------------------------------------------------------------------------
+
+
+head(sp_output2)
+head(total_rratios)
+
+eezid_subset <- c(160, 163, 170, 135, 138, 224, 225, 59, 71, 187, 81, 141, 145, 175, 70, 174, 179, 176, 80, 181, 184, 69, 189,
+                  68, 177, 178, 55, 57, 183, 72, 188, 58, 182, 222, 180, 227, 228, 209, 205, 210, 216, 15, 207, 9, 8, 148, 157, 
+                  212, 11, 10, 13, 12, 6, 7, 18, 17, 5, 155, 151, 153, 147, 162, 154, 156, 3, 146, 152, 19, 161)
+eu <- c(59, 71, 187, 81, 141, 145, 175, 70, 174, 179, 176, 80, 181, 184, 69, 189, 68, 177, 178, 55, 57, 183, 72, 188, 
+        58, 182, 222, 180, 227, 228)
+us <- c(160, 163, 170)
+chile <- c(225, 225)
+denmark <- c(141, 145, 175)
+portugal <- c(55, 57, 183)
+spain <- c(58, 182)
+mirconesia <- c(9, 8, 148, 157, 212, 11, 10, 13, 12)
+melanesia <- c(6, 7, 18, 17, 5)
+polynesia <- c(155, 151, 153, 147, 162, 154, 156, 3, 146, 152, 19, 161)
+
+
+## 160 = Hawaii, 163 = United Sates, 170 = Alaska, 135 = Mexico, 138 = Peru, 224 = Chile, 225 = Easter Island, 59 = Belgium,
+## 71 = Bulgaria, 187 = Croatia, 81 = Cyprus, 141 = Faeroe Islands, 145 = Greenland, 175 = Denmark, 70 = Estonia,
+## 174 = Finland, 179 = France, 176 = Germany, 80 = Greece, 181 = Ireland, 184 = Italy, 69 = Latvia, 189 = Lithuania,
+## 68 = Malta, 177 = Netherlands, 178 = Poland, 55 = Azores, 57 = Madeira, 183 = Portugal, 72 = Romania, 188 = Slovenia,
+## 58 = Canary Islands, 182 = Spain, 222 = Sweden, 180 = United Kingdom, 227 = Jersey, 228 = Guernsey, 209 = China,
+## 205 = Myanmar, 210 = Japan, 216 = Indonesia, 15 = Philippines, 207 = Vietnam, 9 = Mirconesia, 8 = Palau, 148 = Line group,
+## 157 = Phoenix grup, 212 = Kiribati, 11 = Marshall Islands, 10 = Nauru, 6 = Vanuatu, 7 = Solomon Islands, 18 = Fiji,
+## 17 = Papau New Guinea, 5 = New Caledonia, 155 = Tonga, 151 = American Somoa, 153 = Cook Islands, 147 = French Polynesia, 
+## 162 = New Zealand, 154 = Niue, 156 = Tokelau, 3 = Norfolk Island, 146 = Pitcairn, 152 = Samoa, 19 = Tuvalu, 161 = Wallis and Futuna,
+## 13 = Northern Mariana Islands and Guam, 12 = Wake Island
+
 
 
 
@@ -193,48 +239,5 @@ delta_k_eez_df <- k_df %>%
 ## --> Maybe the denominator should be initial range?
 ## How to show both issues?
 ## What do we want to show for the short slide deck with EDF?
-
-
-
-
-
-## Select target countries
-## (United States, Mexico, Peru, Chile, European Union, China, Myanmar, Japan, Indonesia, Philippines, Pacific Islands and Vietnam).
-## EU members: Austria, Belgium, Bulgaria, Croatia, Cyprus, Czechia, Denmark, Estonia, Finland, France, Germany,
-## Greece, Hungary, Ireland, Italy, Latvia, Lithuania, Luxembourg, Malta, Netherlands, Poland, Portugal, Romania, Slovakia,
-## Slovenia, Spain, Sweden, United Kingdom
-## ---------------------------------------------------------------------------------
-
-
-head(sp_output2)
-head(total_rratios)
-
-eezid_subset <- c(160, 163, 170, 135, 138, 224, 225, 59, 71, 187, 81, 141, 145, 175, 70, 174, 179, 176, 80, 181, 184, 69, 189,
-                  68, 177, 178, 55, 57, 183, 72, 188, 58, 182, 222, 180, 227, 228, 209, 205, 210, 216, 15, 207, 9, 8, 148, 157, 
-                  212, 11, 10, 13, 12, 6, 7, 18, 17, 5, 155, 151, 153, 147, 162, 154, 156, 3, 146, 152, 19, 161)
-eu <- c(59, 71, 187, 81, 141, 145, 175, 70, 174, 179, 176, 80, 181, 184, 69, 189, 68, 177, 178, 55, 57, 183, 72, 188, 
-        58, 182, 222, 180, 227, 228)
-us <- c(160, 163, 170)
-chile <- c(225, 225)
-denmark <- c(141, 145, 175)
-portugal <- c(55, 57, 183)
-spain <- c(58, 182)
-mirconesia <- c(9, 8, 148, 157, 212, 11, 10, 13, 12)
-melanesia <- c(6, 7, 18, 17, 5)
-polynesia <- c(155, 151, 153, 147, 162, 154, 156, 3, 146, 152, 19, 161)
-
-
-## 160 = Hawaii, 163 = United Sates, 170 = Alaska, 135 = Mexico, 138 = Peru, 224 = Chile, 225 = Easter Island, 59 = Belgium,
-## 71 = Bulgaria, 187 = Croatia, 81 = Cyprus, 141 = Faeroe Islands, 145 = Greenland, 175 = Denmark, 70 = Estonia,
-## 174 = Finland, 179 = France, 176 = Germany, 80 = Greece, 181 = Ireland, 184 = Italy, 69 = Latvia, 189 = Lithuania,
-## 68 = Malta, 177 = Netherlands, 178 = Poland, 55 = Azores, 57 = Madeira, 183 = Portugal, 72 = Romania, 188 = Slovenia,
-## 58 = Canary Islands, 182 = Spain, 222 = Sweden, 180 = United Kingdom, 227 = Jersey, 228 = Guernsey, 209 = China,
-## 205 = Myanmar, 210 = Japan, 216 = Indonesia, 15 = Philippines, 207 = Vietnam, 9 = Mirconesia, 8 = Palau, 148 = Line group,
-## 157 = Phoenix grup, 212 = Kiribati, 11 = Marshall Islands, 10 = Nauru, 6 = Vanuatu, 7 = Solomon Islands, 18 = Fiji,
-## 17 = Papau New Guinea, 5 = New Caledonia, 155 = Tonga, 151 = American Somoa, 153 = Cook Islands, 147 = French Polynesia, 
-## 162 = New Zealand, 154 = Niue, 156 = Tokelau, 3 = Norfolk Island, 146 = Pitcairn, 152 = Samoa, 19 = Tuvalu, 161 = Wallis and Futuna,
-## 13 = Northern Mariana Islands and Guam, 12 = Wake Island
-  
- 
 
 
