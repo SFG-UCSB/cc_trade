@@ -41,104 +41,146 @@ rratiosdf2 <- rratiosdf %>%
   rename(SciName = species) %>%
   mutate(adj_rratio = ifelse(r < threshold, 0, r)) ## if the ratio of range is < 1%, the adjusted range is 0
   
-## 1) Calculate ratio of total range for each species in each EEZ
+## join with the K outputs and determine K in each country in each year
 ## -------------------------------------------------------------------
-outputs01_sub <- outputs01 %>%
+k_over_time_df <- outputs01 %>%
   filter(discount_rate == 0.00,
          cc_presence == "climate_change",
          scenario == "Full Adaptation") %>%
-  select(RCP, SciName, SpeciesID,  CommName, year) %>%
-  left_join(rratiosdf2)
-  
-initial_range <- outputs01_sub %>%
+  select(RCP, SciName, SpeciesID,  CommName, year, K) %>%
+  rename(total_k = K) %>%
+  left_join(rratiosdf2) %>%
+  mutate(eez_k = adj_rratio * total_k) %>%
+  select(RCP:year, EEZID:adj_rratio, total_k, eez_k)
+
+k_2012 <- k_over_time_df %>%
   filter(year == 2012) %>%
-  select(RCP, SpeciesID, EEZID, rangekm2, total_range, r, adj_rratio) %>%
-  rename(init_rangekm2 = rangekm2,
-         init_total_range = total_range,
-         init_r = r,
-         init_adj_rratio = adj_rratio)
+  mutate(total_k0 = total_k,
+         eez_k0 = eez_k) %>%
+  select(RCP, SciName, SpeciesID, EEZID, EEZ, total_k0, eez_k0)
 
-## change in range by species by EEZ 
-sp_output <- outputs01_sub %>%
-  filter(year %in% c(2050, 2100)) %>%
-  left_join(initial_range) %>%
-  mutate(change_rrange = adj_rratio- init_adj_rratio) 
+k_df <- k_over_time_df %>%
+  left_join(k_2012)
 
-## clean it up
-sp_output2 <- sp_output %>%
-  select(RCP:Country, init_adj_rratio, adj_rratio, change_rrange)
+## calculate change in K for each species
+delta_k_df <- k_df %>%
+  mutate(delta_k = eez_k - eez_k0,
+         delta_k_r = delta_k / eez_k0)
 
 
-## 2) Calculate change in range ratio for entire EEZ (sum of all ranges)
-## ------------------------------------------------------------------------------
-init_total_eez_range <- outputs01_sub %>%
-  filter(year == 2012) %>%
-  select(RCP, SpeciesID, EEZID, rangekm2) %>%
-  group_by(RCP, EEZID) %>%
-  summarise(total_range_eezkm2 = sum(rangekm2)) %>%
-  ungroup()
-
-## total range all sp 
-total_range_df <- outputs01_sub %>%
-  filter(year %in% c(2012, 2050, 2100)) %>%
-  select(RCP, SpeciesID, year, total_range) %>%
-  group_by(RCP, year) %>%
-  summarise(total_range_all_km2 = sum(total_range)) %>%
-  ungroup()
-  
-## total range all sp 2012
-total_range_all_2012_df <- total_range_df %>%
-  filter(year == 2012, 
-         RCP == "RCP26") 
-
-total_range_all_2012 <- as.numeric(total_range_all_2012_df[,3])
-
-## join the two dfs to calculate ratio for 2012
-init_rratio_df <- init_total_eez_range %>%
-  mutate(total_global_range = total_range_all_2012) %>%
-  mutate(init_rratio = total_range_eezkm2 / total_global_range) %>%
-  rename(init_range_eezkm2 = total_range_eezkm2,
-         init_total_range_all = total_global_range)
-
-## calc eez totals in 2050 and 2100
-total_eez_range <- outputs01_sub %>%
-  filter(year %in% c(2050, 2100)) %>%
-  select(RCP, SpeciesID, EEZID, year, rangekm2) %>%
-  group_by(RCP, EEZID, year) %>%
-  summarise(total_range_eezkm2 = sum(rangekm2)) %>%
+## now for each eez
+delta_k_eez_df <- k_df %>%
+  group_by(RCP, year, EEZID, EEZ, Sovereign, Country) %>%
+  summarise(total_eez_k = sum(eez_k, na.rm = T),
+            total_k = sum(total_k, na.rm = T),
+            total_eez_k0 = sum(eez_k0, na.rm = T),
+            total_k0 = sum(total_k0, na.rm = T)) %>%
   ungroup() %>%
-  left_join(total_range_df) %>%
-  mutate(rratio = total_range_eezkm2 / total_range_all_km2)
+  mutate(delta_k_eez = total_eez_k - total_eez_k0,
+         detta_k_eez_r = delta_k_eez / total_eez_k0)
 
 
-## join and calculate differences in r ratio
-total_range_ratios <- total_eez_range %>%
-  left_join(init_rratio_df) %>%
-  mutate(change_rrange = rratio - init_rratio)
 
-id_df <- EEZ_HS_ids %>%
-  rename(EEZID = EEZ_ID) %>%
-  select(EEZID: Sovereign)
-  
-## clean it up
-total_rratios <- total_range_ratios %>%
-  select(RCP, EEZID, year, rratio, init_rratio, change_rrange) %>%
-  left_join(id_df) %>%
-  select(RCP, EEZID, EEZ, Country, Sovereign, year:change_rrange)
-  
 
-## Check out what's happening in Peru to make sure this all makes sense
-## ------------------------------------------------------------------------
-sp_output_pe <- sp_output %>%
-  filter(EEZID == 138,
-         year %in% c(2100),
-         adj_rratio > 0 & init_adj_rratio > 0) %>%
-  group_by(Country) %>%
-  summarise(sum_range = sum(rangekm2),
-            sum_all_2100 = sum(total_range),
-            sum_init_range = sum(init_rangekm2),
-            sum_all_init = sum(init_total_range)) %>%
-  ungroup()
+
+# ## 1) Calculate K in each country and compare to 2012
+# ## -------------------------------------------------------------------
+# outputs01_sub <- outputs01 %>%
+#   filter(discount_rate == 0.00,
+#          cc_presence == "climate_change",
+#          scenario == "Full Adaptation") %>%
+#   select(RCP, SciName, SpeciesID,  CommName, year) %>%
+#   left_join(rratiosdf2)
+#   
+# initial_range <- outputs01_sub %>%
+#   filter(year == 2012) %>%
+#   select(RCP, SpeciesID, EEZID, rangekm2, total_range, r, adj_rratio) %>%
+#   rename(init_rangekm2 = rangekm2,
+#          init_total_range = total_range,
+#          init_r = r,
+#          init_adj_rratio = adj_rratio)
+# 
+# # ## change in range by species by EEZ 
+# # sp_output <- outputs01_sub %>%
+# #   filter(year %in% c(2050, 2100)) %>%
+# #   left_join(initial_range) %>%
+# #   mutate(change_rrange = adj_rratio- init_adj_rratio)
+# # 
+# # ## clean it up
+# # sp_output2 <- sp_output %>%
+# #   select(RCP:Country, init_adj_rratio, adj_rratio, change_rrange)
+# 
+# 
+# ## 2) Calculate change in range ratio for entire EEZ (sum of all ranges)
+# ## ------------------------------------------------------------------------------
+# init_total_eez_range <- outputs01_sub %>%
+#   filter(year == 2012) %>%
+#   select(RCP, SpeciesID, EEZID, rangekm2) %>%
+#   group_by(RCP, EEZID) %>%
+#   summarise(total_range_eezkm2 = sum(rangekm2)) %>%
+#   ungroup()
+# 
+# ## total range all sp 
+# total_range_df <- outputs01_sub %>%
+#   filter(year %in% c(2012, 2050, 2100)) %>%
+#   select(RCP, SpeciesID, year, total_range) %>%
+#   group_by(RCP, year) %>%
+#   summarise(total_range_all_km2 = sum(total_range)) %>%
+#   ungroup()
+#   
+# ## total range all sp 2012
+# total_range_all_2012_df <- total_range_df %>%
+#   filter(year == 2012, 
+#          RCP == "RCP26") 
+# 
+# total_range_all_2012 <- as.numeric(total_range_all_2012_df[,3])
+# 
+# ## join the two dfs to calculate ratio for 2012
+# init_rratio_df <- init_total_eez_range %>%
+#   mutate(total_global_range = total_range_all_2012) %>%
+#   mutate(init_rratio = total_range_eezkm2 / total_global_range) %>%
+#   rename(init_range_eezkm2 = total_range_eezkm2,
+#          init_total_range_all = total_global_range)
+# 
+# ## calc eez totals in 2050 and 2100
+# total_eez_range <- outputs01_sub %>%
+#   filter(year %in% c(2050, 2100)) %>%
+#   select(RCP, SpeciesID, EEZID, year, rangekm2) %>%
+#   group_by(RCP, EEZID, year) %>%
+#   summarise(total_range_eezkm2 = sum(rangekm2)) %>%
+#   ungroup() %>%
+#   left_join(total_range_df) %>%
+#   mutate(rratio = total_range_eezkm2 / total_range_all_km2)
+# 
+# 
+# ## join and calculate differences in r ratio
+# total_range_ratios <- total_eez_range %>%
+#   left_join(init_rratio_df) %>%
+#   mutate(change_rrange = rratio - init_rratio)
+# 
+# id_df <- EEZ_HS_ids %>%
+#   rename(EEZID = EEZ_ID) %>%
+#   select(EEZID: Sovereign)
+#   
+# ## clean it up
+# total_rratios <- total_range_ratios %>%
+#   select(RCP, EEZID, year, rratio, init_rratio, change_rrange) %>%
+#   left_join(id_df) %>%
+#   select(RCP, EEZID, EEZ, Country, Sovereign, year:change_rrange)
+#   
+# 
+# ## Check out what's happening in Peru to make sure this all makes sense
+# ## ------------------------------------------------------------------------
+# sp_output_pe <- sp_output %>%
+#   filter(EEZID == 138,
+#          year %in% c(2100),
+#          adj_rratio > 0 & init_adj_rratio > 0) %>%
+#   group_by(Country) %>%
+#   summarise(sum_range = sum(rangekm2),
+#             sum_all_2100 = sum(total_range),
+#             sum_init_range = sum(init_rangekm2),
+#             sum_all_init = sum(init_total_range)) %>%
+#   ungroup()
           
 ## Thoughts
 ## A few things going on here. The % of total range of a stock at any given year can be different if the stock is shifting.
