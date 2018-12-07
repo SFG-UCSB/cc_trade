@@ -85,6 +85,12 @@ delta_k_eez_df <- k_df %>%
 write_csv(delta_k_df, paste0(pscctrade, "data/eez_delta_k_df.csv"))
 
 
+## read in data
+##---------------------------------------------------------------------------------
+
+sp_df <- read.csv(paste0(pscctrade, "data/sp_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
+eez_df <- read_csv(paste0(pscctrade, "data/eez_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
+
 
 
 ## Select target countries
