@@ -29,7 +29,7 @@ outputs01 <- readRDS(paste0(pathstart, 'Outputs/Results/Shift1n/cutoff01/global_
   filter(RCP %in% c("RCP26", "RCP45", "RCP60", "RCP85"))
 
 ## Read in compressed high res map
-map_highres <- st_read(dsn = paste0(pathstart, "plot_data/World_EEZ_v8_20140228/Simplified_high_res"), layer = "simpl_high_res_map_2014") ## high resolution
+# map_highres <- st_read(dsn = paste0(pathstart, "plot_data/World_EEZ_v8_20140228/Simplified_high_res"), layer = "simpl_high_res_map_2014") ## high resolution
 
 ## Calculate change in range two ways: 1) By EEZ for each species and 2) by EEZ (total range)
 ## --------------------------------------------------------------------------------------------------
@@ -68,7 +68,8 @@ delta_k_df <- k_df %>%
   mutate(delta_k = eez_k - eez_k0,
          delta_k_r = delta_k / eez_k0)
 
-write_csv(delta_k_df, paste0(pscctrade, "data/sp_delta_k_df.csv"))
+saveRDS(delta_k_df, paste0(pscctrade, "data/sp_delta_k_df.rds"))
+# write_csv(delta_k_df, paste0(pscctrade, "data/sp_delta_k_df.csv"))
 
 ## now for each eez
 delta_k_eez_df <- k_df %>%
@@ -82,14 +83,15 @@ delta_k_eez_df <- k_df %>%
          detta_k_eez_r = delta_k_eez / total_eez_k0)
 
 
-write_csv(delta_k_df, paste0(pscctrade, "data/eez_delta_k_df.csv"))
+saveRDS(delta_k_df, paste0(pscctrade, "data/eez_delta_k_df.rds"))
+# write_csv(delta_k_df, paste0(pscctrade, "data/eez_delta_k_df.csv"))
 
 
 ## read in data
 ##---------------------------------------------------------------------------------
 
-sp_df <- read.csv(paste0(pscctrade, "data/sp_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
-eez_df <- read_csv(paste0(pscctrade, "data/eez_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
+sp_df <- read.csv(paste0(pscctrade, "data/sp_delta_k_df.csv"))
+eez_df <- read_csv(paste0(pscctrade, "data/eez_delta_k_df.csv"))
 
 
 
