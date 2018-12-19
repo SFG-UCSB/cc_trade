@@ -82,7 +82,7 @@ delta_k_eez_df <- k_df %>%
          detta_k_eez_r = delta_k_eez / total_eez_k0)
 
 
-write_csv(delta_k_eez_df, paste0(pscctrade, "data/eez_delta_k_df.csv"))
+write_csv(delta_k_df, paste0(pscctrade, "data/eez_delta_k_df.csv"))
 
 
 ## read in data
