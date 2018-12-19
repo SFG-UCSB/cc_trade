@@ -92,6 +92,9 @@ sp_df <- read.csv(paste0(pscctrade, "data/sp_delta_k_df.csv"), row.names = F, st
 eez_df <- read_csv(paste0(pscctrade, "data/eez_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
 
 
+## target geographies
+## --------------------------------------------------------------------------------------------------------------
+
 
 ## Select target countries
 ## (United States, Mexico, Peru, Chile, European Union, China, Myanmar, Japan, Indonesia, Philippines, Pacific Islands and Vietnam).
