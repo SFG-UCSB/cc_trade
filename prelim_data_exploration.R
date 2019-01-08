@@ -21,6 +21,14 @@ rratios45 <- readRDS(paste0(pathstart, "range_ratio_data/rratios_xsp_xyr_xeez_45
 rratios60 <- readRDS(paste0(pathstart, "range_ratio_data/rratios_xsp_xyr_xeez_60.RDS"))
 rratios85 <- readRDS(paste0(pathstart, "range_ratio_data/rratios_xsp_xyr_xeez_85.RDS"))
 
+## test 
+test <- rratios85 %>%
+  group_by(RCP, species, year) %>%
+  summarise(sum_r = sum(r)) %>%
+  ungroup()
+
+
+
 ## create one df with all RCPs
 rratiosdf <- rbind(rratios26, rratios45, rratios60, rratios85)
 
@@ -34,13 +42,13 @@ map_highres <- st_read(dsn = paste0(pathstart, "plot_data/World_EEZ_v8_20140228/
 ## Calculate change in range two ways: 1) By EEZ for each species and 2) by EEZ (total range)
 ## --------------------------------------------------------------------------------------------------
 
-## range threshhold
-threshold <- 0.01
-  
-## make some changes to the rratios dataframe
+# ## range threshhold
+# threshold <- 0.01
+#   
+# ## make some changes to the rratios dataframe
 rratiosdf2 <- rratiosdf %>%
-  rename(SciName = species) %>%
-  mutate(adj_rratio = ifelse(r < threshold, 0, r)) ## if the ratio of range is < 1%, the adjusted range is 0
+  rename(SciName = species) 
+  # mutate(adj_rratio = ifelse(r < threshold, 0, r)) ## if the ratio of range is < 1%, the adjusted range is 0
   
 ## join with the K outputs and determine K in each country in each year
 ## -------------------------------------------------------------------
@@ -51,8 +59,8 @@ k_over_time_df <- outputs01 %>%
   select(RCP, SciName, SpeciesID,  CommName, year, K) %>%
   rename(total_k = K) %>%
   left_join(rratiosdf2) %>%
-  mutate(eez_k = adj_rratio * total_k) %>%
-  select(RCP:year, EEZID:adj_rratio, total_k, eez_k)
+  mutate(eez_k = r * total_k) %>%
+  select(RCP:year, EEZID:r, total_k, eez_k)
 
 k_2012 <- k_over_time_df %>%
   filter(year == 2012) %>%
@@ -88,8 +96,8 @@ write_csv(delta_k_eez_df, paste0(pscctrade, "data/eez_delta_k_df.csv"))
 ## read in data
 ##---------------------------------------------------------------------------------
 
-sp_df <- read.csv(paste0(pscctrade, "data/sp_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
-eez_df <- read_csv(paste0(pscctrade, "data/eez_delta_k_df.csv"), row.names = F, stringsAsFactors = FALSE)
+sp_df <- readRDS(paste0(pscctrade, "data/sp_delta_k_df.rds"))
+eez_df <- read_csv(paste0(pscctrade, "data/eez_delta_k_df.rds"))
 
 
 ## target geographies
