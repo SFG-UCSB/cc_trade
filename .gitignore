@@ -1,3 +1,14 @@
+# Folders
+drafts/
+figures/
+grants/
+presentations/
+data/aquamaps/
+
+# Large data
+data/gaines/*
+data/cmip5/*
+
 # History files
 .Rhistory
 .Rapp.history
