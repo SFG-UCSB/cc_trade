@@ -3,7 +3,9 @@ drafts/
 figures/
 grants/
 presentations/
+data/
 data/aquamaps/
+data/environmental/
 
 # Large data
 data/gaines/*
