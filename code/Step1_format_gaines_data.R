@@ -22,6 +22,28 @@ data_orig <- readRDS(file.path(datadir, "eez_delta_k_df.rds"))
 # Load final results
 results_orig <- readRDS(file.path(datadir, "global_cc_manuscript_results_1nation_20171005.rds"))
 
+# Shape parameter
+p <- 0.188
+pdiv <- (p+1)^(1/p)
+
+
+# Derive r values from Tracey's data
+################################################################################
+
+# MSY time series aren't provided
+# However, in this PT parameterization, r=FMSY
+# Thus, MSY = r*K/pdiv where r=FMSY
+
+# BMSY = K/pdiv (from Gaines et al 2018 supplement)
+# MSY = rk/pdiv (from Gaines et al 2018 supplement)
+# FMSY = r (apparently true)
+
+# Here is proof:
+r_test <- results_orig %>% 
+  mutate(r=FMSY, 
+         msy=r*K/pdiv) %>% 
+  filter(year==2012)
+plot(msy ~ MSY2012, r_test)
 
 # Learn about data
 ################################################################################
@@ -63,13 +85,14 @@ sdata1 <- sdata %>%
          range_prop=r, range_prop_adj=adj_rratio, 
          k_tot=total_k, k_eez=eez_k, k0_eez=eez_k0, k0_tot=total_k0) %>% 
   # Add columns
-  mutate(k_prop=k_eez / k_tot) %>% 
+  mutate(k_prop=k_eez / k_tot, # I don't trust this because Kprops don't sum to one later
+         k_prop1=range_prop)  %>% # so I trust this value
   # Rearrange columns 
   select(rcp, sovereign, country, eez_id, eez, 
          species_id, species, comm_name, year,
          range_eez_km2, range_tot_km2, range_prop,
-         k_eez, k_tot, k_prop, k0_eez, k0_tot)
-plot(k_prop ~ range_prop, sdata1)
+         k_eez, k_tot, k_prop, k0_eez, k0_tot, k_prop1)
+plot(k_prop ~ k_prop1, sdata1)
 
 # Subset one species from results
 sresults <- filter(results_orig, SciName=="Gadus morhua" & cc_presence=="climate_change")
@@ -94,10 +117,13 @@ sresults1 <- sresults %>%
          profit_discounted=discounted_prof,
          fmort=fish_mort_rate,
          ffmsy=fvfmsy) %>% 
+  # Add MSY
+  mutate(r=fmsy,
+         msy=r*k/pdiv) %>% 
   # Remove non-critical scenarios
-  filter(cc_presence=="climate_change" & discount_rate==0) %>%
-  filter(year %in% c(2012, 2050, 2100))
+  filter(cc_presence=="climate_change" & discount_rate==0)
   
+
 # Format full dataset
 ################################################################################
 
@@ -114,8 +140,6 @@ iso_key$sovereign[is.na(iso_key$sovereign_iso3)]
 
 # Format data
 data <- data_orig %>%
-  # Reduce to first year and reference years
-  filter(year %in% c(2012, 2050, 2100)) %>% 
   # Rename columns
   setNames(tolower(colnames(.))) %>% 
   rename(species=sciname,
@@ -148,34 +172,34 @@ results <- results_orig %>%
          profit_discounted=discounted_prof,
          fmort=fish_mort_rate,
          ffmsy=fvfmsy) %>% 
+  # Add MSY
+  mutate(r=fmsy,
+         msy=r*k/pdiv) %>% 
   # Remove non-critical scenarios
-  filter(cc_presence=="climate_change" & discount_rate==0) %>% 
-  filter(year %in% c(2012, 2050, 2100))
+  filter(cc_presence=="climate_change" & discount_rate==0)
+
+# Perform some data checks
+# Infinite B/BMSY when BMSY is 0
+results_check <- results %>%
+  filter(k==0)
 
 # Merge EEZ range shift projections and global biomass, catch, and profit projections
 # Final should be nrow(data) * 4 scenarios : nrow(data) * 4
 final <- data %>% 
   select(rcp:range_prop) %>% 
-  left_join(select(results, rcp, scenario, species, year, msy2012, bbmsy, ffmsy, biomass, harvest, profit), by=c("rcp", "species", "year")) %>% 
-  mutate(biomass_eez=biomass*range_prop,
+  # Add biomass, harvest, profit
+  left_join(select(results, rcp, scenario, species, year, r, k, msy, bmsy, fmsy, bbmsy, ffmsy, fmort, biomass, harvest, profit), by=c("rcp", "species", "year")) %>% 
+  # Calculcate proportions in EEZ
+  mutate(msy_eez=msy*range_prop,
+         biomass_eez=biomass*range_prop,
          harvest_eez=harvest*range_prop,
-         profit_eez=profit*range_prop)
+         profit_eez=profit*range_prop) %>% 
+  # Housekeeping tasks
+  mutate(bbmsy=ifelse(is.infinite(bbmsy), NA, bbmsy)) # This happens when K=0 because BMSY=0
 
-# Inspect completeness
-# freeR::complete(final)
 
-# Is all of K accounted for each year?
-# No, and I think this is b/c the AquaMaps range covers countries who are not contributing to
-# the aggregate K value because they didn't have catch data?
-stats <- data %>% 
-  filter(year==2012 ) %>% 
-  group_by(rcp, species, year) %>% 
-  summarize(k=sum(k_prop, na.rm=T))
-p <- ggplot(stats, aes(x=k)) + geom_histogram(binwidth=0.025, colour="white") + 
-  xlim(0,1) + ylim(0,150) + xlab("Proportion of carrying capacity") + ylab("Frequency") + 
-  facet_wrap(~rcp, ncol=2) + theme_bw()
-p
-ggsave(file.path(plotdir, "k_proportion.png"), width=4.5, height=4.5, units="in", dpi=300)
+# Export full dataset
+################################################################################
 
 # Export
 saveRDS(final, file.path(outdir, "gaines_data_for_eez_analysis.Rds"))
