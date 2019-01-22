@@ -37,9 +37,9 @@ prices_df2 <- prices_df %>%
   filter(p_same == 0)
 
 ## how much do the prices vary?
-price_fig <- ggplot(prices_df2, aes(x = sci_name, y = price)) +
-  geom_jitter(stat = "identity", position = "jitter") +
-  facet_wrap(~ sci_name, scales = "free_y")
+# price_fig <- ggplot(prices_df2, aes(x = sci_name, y = price)) +
+#   geom_jitter(stat = "identity", position = "jitter") +
+#   facet_wrap(~ sci_name, scales = "free_y")
   
   
 
