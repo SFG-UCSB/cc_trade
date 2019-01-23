@@ -36,10 +36,27 @@ prices_df2 <- prices_df %>%
   ## filter for species that have different price values for stocks
   filter(p_same == 0)
 
+## let's break these up
+max_p <- prices_df2 %>%
+  group_by(sci_name) %>%
+  filter(price == max(price)) %>%
+  ungroup() %>%
+  arrange(desc(price)) %>%
+  select(sci_name:p_same) %>%
+  distinct()
+
+group_df <- data.frame(grp_num = c(rep(1, 21), rep(2, 20), rep(3, 20), rep(4, 20)))
+
+max_p2 <- cbind(max_p, group_df) %>%
+  select(sci_name, grp_num)
+
+prices_df3 <- prices_df2 %>%
+  left_join(max_p2)
+
 ## how much do the prices vary?
-# price_fig <- ggplot(prices_df2, aes(x = sci_name, y = price)) +
-#   geom_jitter(stat = "identity", position = "jitter") +
-#   facet_wrap(~ sci_name, scales = "free_y")
+price_fig <- ggplot(prices_df3, aes(x = sci_name, y = price)) +
+  geom_jitter(stat = "identity", position = "jitter") +
+  facet_wrap(~ grp_num, scales = "free_y")
   
   
 
