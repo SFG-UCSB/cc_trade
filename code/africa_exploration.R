@@ -22,3 +22,4 @@ gfw_wa <- boundary_gfw %>%
   summarise(fishing_hrs = sum(fishing_hours)) %>%
   ungroup() %>%
   mutate(flag_nation = countrycode(flag, "iso3c", "country.name"))
+
