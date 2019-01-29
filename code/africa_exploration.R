@@ -45,10 +45,12 @@ gfw_wa_eez <- gfw_wa %>%
 pal2 <- wes_palette("Darjeeling1", 5, type = "discrete")
 
 
-fishing_hrs1 <- ggplot(gfw_wa_eez, aes(x = closest_eez_boundary_territory, y = sum_fishing_hrs / 1000, fill = flag_region)) +
+gfw_wa_eez$closest_eez_boundary_territory <- factor(gfw_wa_eez$closest_eez_boundary_territory, levels = wa_factor_df$closest_eez_boundary_territory)  
+
+fishing_hrs1 <- ggplot(gfw_wa_eez %>% filter(), aes(x = year, y = sum_fishing_hrs / 1000, fill = flag_region)) +
   geom_bar(stat = "identity") +
   geom_hline(yintercept = 0, size = 0.5, color = "grey") +
-  facet_wrap(~ year, ncol = 2) +
+  facet_wrap(~ closest_eez_boundary_territory, ncol = 2, scales = "free") +
   scale_fill_manual(values = c("#5BBCD6", "#00A08A")) +
   xlab("EEZ") +
   ylab("Fishing hours (thousands)") +
@@ -149,4 +151,24 @@ fishing_2017_all <- ggplot(gfw_wa_all2, aes(x = closest_eez_boundary_territory, 
 ggsave(filename = paste0(pathstart, "outputs/figures/prelim/effort_wa_2017.pdf"), fishing_2017_all, width = 11, height = 11, units = "in")
 
 
+gfw_wa_eez_trend <- gfw_wa_eez %>%
+  filter(flag_region == "West Africa") %>%
+  group_by(closest_eez_boundary_territory) %>%
+  mutate(cutoff = ifelse(max(rel_hrs) >= 0.2, ">= 20% WA effort at some point", "Always < 20% WA effort")) %>%
+  ungroup()
 
+
+## Make figure showing trends
+trend <- ggplot(gfw_wa_eez_trend, aes(x = year, y = rel_hrs, color = cutoff)) +
+  geom_line(alpha = 0.8) +
+  geom_hline(yintercept = 0, size = 0.5, color = "grey") +
+  facet_wrap(~ closest_eez_boundary_territory, ncol = 3) +
+  ylab("Relative fishing hours") +
+  scale_color_manual(values = c("#00A08A", "black")) +
+  guides(color = guide_legend(title = "")) +
+  ggtitle("Fishing hours within EEZs from GFW data: West African effort vs. total effort") +
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        legend.position = c(0.84, 0.075))
+
+ggsave(filename = paste0(pathstart, "outputs/figures/prelim/wa_effort_trend.pdf"), trend, width = 11, height = 11, units = "in")
