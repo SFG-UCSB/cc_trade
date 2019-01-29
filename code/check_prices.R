@@ -57,7 +57,7 @@ prices_df3 <- prices_df2 %>%
 # price_fig <- ggplot(prices_df3, aes(x = sci_name, y = price)) +
 #   geom_jitter(stat = "identity", position = "jitter") +
 #   facet_wrap(~ grp_num, scales = "free_y")
-  
+#   
 ## note -- if profit changes are presented in percentages, the price differences shouldn't matter. Also, for all but 81 species,
 ## the price is the same for all stocks of that species.
   
