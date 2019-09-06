@@ -4,7 +4,6 @@
 ## country-level climate change ---
 
 ## load libraries
-library(sf)
 library(tidyverse)
 
 ## Directory path
