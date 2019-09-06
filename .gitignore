@@ -1,5 +1,6 @@
 # Ignore DS_Store files... why won't you go away?!
 .DS_Store
+.DS_Store?
 
 # Folders
 drafts/
