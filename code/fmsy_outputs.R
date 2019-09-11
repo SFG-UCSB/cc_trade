@@ -14,6 +14,7 @@ pathstartcc <- '~/Box/PackardCC/'
 load('~/Box/Global Climate Project/input_files/Data prep/Spatial data/UpdateResults_11_2017.RData')
 
 cc_outputs <- readRDS(paste0(pathstart, "Outputs/Results/Final Runs/compiled_global_cc_results_20171005_1nation.rds"))
+paper_outputs <- readRDS(paste0(pathstart, "Outputs/Results/Final Runs/global_cc_manuscript_results_1nation_20171005.rds"))
 
 ## read in data
 rratios26 <- readRDS(paste0(pathstartcc, "range_ratio_data/rratios_xsp_xyr_xeez_26.RDS"))
