@@ -122,7 +122,7 @@ sresults1 <- sresults %>%
          msy=r*k/pdiv) %>% 
   # Remove non-critical scenarios
   filter(cc_presence=="climate_change" & discount_rate==0)
-  
+
 
 # Build EEZ key
 ################################################################################
@@ -217,7 +217,7 @@ freeR::check_names(spp_key$species)
 anyDuplicated(spp_key$species_id)
 
 
-# Format range dataset
+# Format full dataset
 ################################################################################
 
 # Format range shift time series
@@ -242,11 +242,9 @@ ranges <- ranges_orig %>%
   select(rcp, sovereign_iso3, sovereign, country_iso3, country, eez_id, eez, 
          species_id, species, comm_name, year,
          range_eez_km2, range_tot_km2, range_prop,
-         k_eez, k_tot, k_prop, k0_eez, k0_tot)
-
-
-# Format outcomes dataset
-################################################################################
+         k_eez, k_tot, k_prop, k0_eez, k0_tot) %>% 
+  # Reduce to only observations with range to reduce file size later
+  filter(range_prop>0)
 
 # Format fisheries outcomes time series
 outcomes <- outcomes_orig %>% 
@@ -264,7 +262,7 @@ outcomes <- outcomes_orig %>%
   # Add MSY
   mutate(r=fmsy,
          msy=r*k/pdiv,
-         msy=ifelse(k==0, 0, msy),
+         msy=ifelse(k==0, NA, msy),
          bmsy=ifelse(k==0, NA, bmsy),
          fmsy=ifelse(k==0, NA, fmsy),
          bbmsy=ifelse(k==0, NA, bbmsy),
@@ -294,34 +292,6 @@ factors <- outcomes %>%
 outcomes_check <- outcomes %>%
   filter(k==0)
 freeR::complete(outcomes)
-
-
-# Build MSY time series
-################################################################################
-
-# Global MSY time series
-# 779 * length(2012:2100) * 4
-msy_ts_g <- outcomes %>%
-  filter(scenario=="No Adaptation") %>% 
-  select(rcp, species, comm_name1, year, msy)
-
-# EEZ-level MSY time series
-msy_ts <- ranges %>% 
-  # Reduce to important columns
-  select(rcp:range_prop) %>% 
-  # Add K and MSY from just one scenario (since this isn't driven by scenario) 
-  left_join(msy_ts_g, by=c("rcp", "species", "year")) %>% 
-  # Calculate EEZ-level MSY
-  mutate(msy_eez=msy*range_prop) %>% 
-  select(rcp:comm_name, comm_name1, everything())
-
-# Export
-save(msy_ts, msy_ts_g, file=file.path(outdir, "gaines_eez_msy_time_series.Rdata"))
-
-
-
-# Merge ranges and outcomes dataset
-################################################################################
 
 # Merge EEZ range shift projections and global biomass, catch, and profit projections
 # Final should be nrow(ranges) * 6 scenarios : nrow(ranges) * 6

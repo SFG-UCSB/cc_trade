@@ -14,13 +14,14 @@ library(countrycode)
 # Directories
 datadir <- "data/gaines/raw"
 plotdir <- "figures/edf_targets"
-outdir <- "data/gaines"
+outdir <- "imperfect/data"
 
 # Load data
 ranges_orig <- readRDS(file.path(datadir, "eez_delta_k_df.rds")) # EEZ range
 
-# Load final results
-outcomes_orig <- readRDS(file.path(datadir, "global_cc_1nation_manuscript_2019Feb12.rds"))
+# Load data
+datadir1 <- "/Users/cfree/Box Sync/SFG Centralized Resources/Projects/cc_trade/outputs/model_outputs/compiled_files/all_imperfect_scenarios"
+outcomes_orig <- readRDS(file.path(datadir1, "global_cc_1nation_all_int_2019Feb19.rds"))
 
 # Shape parameter
 p <- 0.188
@@ -95,15 +96,16 @@ sdata1 <- sdata %>%
 plot(k_prop ~ k_prop1, sdata1)
 
 # Subset one species from results
-sresults <- filter(outcomes1_orig, SciName=="Gadus morhua" & cc_presence=="climate_change")
+sresults <- filter(outcomes_orig, SciName=="Gadus morhua" & cc_presence=="climate_change")
 
 # Inspect scenarios
 # 5 RCPs: none, 2.6, 4.5, 6.0, 8.5
 # 4 scenarios: none, full, prod only, range only
+# 4 intervention intervals: 5, 10, 15, 20
 # 3 discount rates
 # Years: 2012-2100 (89)
 scenarios <- sresults %>%
-  group_by(RCP, cc_presence, scenario, HCR, discount_rate) %>% 
+  group_by(RCP, cc_presence, scenario, HCR, intervention_int, discount_rate) %>% 
   summarize(n=n())
 
 # Format results
@@ -122,7 +124,7 @@ sresults1 <- sresults %>%
          msy=r*k/pdiv) %>% 
   # Remove non-critical scenarios
   filter(cc_presence=="climate_change" & discount_rate==0)
-  
+
 
 # Build EEZ key
 ################################################################################
@@ -186,7 +188,7 @@ n_distinct(eez_key$sovereign) # 159 sovereign nations
 eez_check <- eez_key %>%
   group_by(country) %>% 
   summarize(n=n_distinct(eez)) %>% 
-  desc(n)
+  arrange(desc(n))
 
 # Country, EEZ, and EEZ id should all be unique identifiers and map to each other
 anyDuplicated(eez_key$eez_id)
@@ -275,8 +277,11 @@ outcomes <- outcomes_orig %>%
          profit=ifelse(k==0, 0, profit)) %>% 
   # Remove non-critical scenarios
   filter(cc_presence=="climate_change" & discount_rate==0) %>% 
+  # Modify scenario column
+  mutate(scenario_orig=scenario,
+         scenario=ifelse(grepl("Imperfect", scenario_orig), paste(scenario_orig, intervention_int, "yr"), scenario_orig)) %>% 
   # Arrange columns
-  select(rcp, scenario, hcr, intervention_int,
+  select(rcp, scenario_orig, scenario, hcr, intervention_int,
          species_id, species, comm_name, comm_name1, 
          shifter, first_shift_yr, msy2012, 
          year, r, k, msy, bmsy, fmsy, bbmsy, ffmsy, 
@@ -299,36 +304,43 @@ freeR::complete(outcomes)
 # Build MSY time series
 ################################################################################
 
-# Global MSY time series
-# 779 * length(2012:2100) * 4
-msy_ts_g <- outcomes %>%
-  filter(scenario=="No Adaptation") %>% 
-  select(rcp, species, comm_name1, year, msy)
+# I'm commenting this out in the imperfect productivity processing
 
-# EEZ-level MSY time series
-msy_ts <- ranges %>% 
-  # Reduce to important columns
-  select(rcp:range_prop) %>% 
-  # Add K and MSY from just one scenario (since this isn't driven by scenario) 
-  left_join(msy_ts_g, by=c("rcp", "species", "year")) %>% 
-  # Calculate EEZ-level MSY
-  mutate(msy_eez=msy*range_prop) %>% 
-  select(rcp:comm_name, comm_name1, everything())
-
-# Export
-save(msy_ts, msy_ts_g, file=file.path(outdir, "gaines_eez_msy_time_series.Rdata"))
+# # Global MSY time series
+# # 779 * length(2012:2100) * 4
+# msy_ts_g <- outcomes %>%
+#   filter(scenario=="No Adaptation") %>% 
+#   select(rcp, species, comm_name1, year, msy)
+# 
+# # EEZ-level MSY time series
+# msy_ts <- ranges %>% 
+#   # Reduce to important columns
+#   select(rcp:range_prop) %>% 
+#   # Add K and MSY from just one scenario (since this isn't driven by scenario) 
+#   left_join(msy_ts_g, by=c("rcp", "species", "year")) %>% 
+#   # Calculate EEZ-level MSY
+#   mutate(msy_eez=msy*range_prop) %>% 
+#   select(rcp:comm_name, comm_name1, everything())
+# 
+# # Export
+# save(msy_ts, msy_ts_g, file=file.path(outdir, "gaines_eez_msy_time_series.Rdata"))
 
 
 
 # Merge ranges and outcomes dataset
 ################################################################################
 
+# Reduce outcomes
+scen_do <- c("No Adaptation", "Full Adaptation", paste("Imperfect Full Adaptation", c(5,10,15,20), "yr"))
+outcomes1 <- outcomes %>% 
+  filter(scenario %in% scen_do)
+
 # Merge EEZ range shift projections and global biomass, catch, and profit projections
-# Final should be nrow(ranges) * 6 scenarios : nrow(ranges) * 6
+# Final should be nrow(ranges) * 5 scenarios : nrow(ranges) * 6
 data <- ranges %>% 
   select(rcp:range_prop) %>% 
   # Add biomass, harvest, profit
-  left_join(select(outcomes, rcp, scenario, hcr, species, comm_name1, 
+  left_join(select(outcomes1, rcp, scenario, hcr, species, comm_name1, 
                    year, r, k, msy, bmsy, fmsy, bbmsy, ffmsy, 
                    fmort, biomass, harvest, profit), by=c("rcp", "species", "year")) %>%
   # Calculcate proportions in EEZ
@@ -344,5 +356,5 @@ data <- ranges %>%
 ################################################################################
 
 # Export
-saveRDS(data, file.path(outdir, "gaines_data_for_eez_analysis.Rds"))
+saveRDS(data, file.path(outdir, "gaines_data_for_eez_analysis_imperfect.Rds"))
 

@@ -56,8 +56,8 @@ par(mfrow=c(4,3), mar=c(2,2,1,1), oma=c(4,4,4,2))
 
 # Loop through countries
 i <- j <- k <- 1
-for(i in 1:3){
-# for(i in 1:length(cntrys)){
+# for(i in 1:3){
+for(i in 1:length(cntrys)){
   
   # Loop through RCPs
   for(j in 1:length(rcps)){
