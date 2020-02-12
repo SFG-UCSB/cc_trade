@@ -14,7 +14,7 @@ data/gaines/*
 data/cmip5/*
 data/eezs
 rshiny/
-dist_shift
+dist_shift/data
 imperfect
 
 # Large files
