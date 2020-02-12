@@ -13,10 +13,12 @@ data/environmental/
 data/gaines/*
 data/cmip5/*
 data/eezs
-data/fao
 rshiny/
 dist_shift
 imperfect
+
+# Large files
+data/fao/1950_2016_fao_global_capture_production_formatted.csv
 
 # History files
 .Rhistory
