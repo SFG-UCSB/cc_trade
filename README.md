@@ -2,7 +2,7 @@
 
 This is the GitHub repository for the following paper:
 
-Free CM, Mangin T, García Molinos J, Ojea E, Costello C, Gaines SD (2020) Realistic fisheries management reforms could mitigate the impacts of climate change in most countries. In press at PLoS One.
+Free CM, Mangin T, García Molinos J, Ojea E, Burden M, Costello C, Gaines SD (2020) Realistic fisheries management reforms could mitigate the impacts of climate change in most countries. In press at PLoS One.
 
 The data are located in two places:
 1. Realistic adaptation scenarios: imperfect > data
