@@ -15,7 +15,7 @@ data/cmip5/*
 data/eezs
 rshiny/
 dist_shift/data
-imperfect
+imperfect/data/gaines_data_for_eez_analysis_imperfect.Rds
 
 # Large files
 data/fao/1950_2016_fao_global_capture_production_formatted.csv
