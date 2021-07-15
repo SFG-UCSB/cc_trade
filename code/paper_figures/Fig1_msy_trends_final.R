@@ -79,7 +79,14 @@ eezs1 <- eezs %>%
                                   "RCP60"="RCP 6.0",
                                   "RCP85"="RCP 8.5")))
 
-
+# Export data for Anna Cabre <annanusca@gmail.com>
+data_out <- data %>% 
+  ungroup() %>% 
+  filter(!is.na(rcp) & rcp!="RCP26") %>% 
+  mutate(rcp=plyr::revalue(rcp, c("RCP45"="RCP 4.5",
+                                  "RCP60"="RCP 6.0",
+                                  "RCP85"="RCP 8.5")))
+write.csv(data_out, file="~/Desktop/Fig1_data.csv", row.names=F)
 
 # Build time series data
 ################################################################################

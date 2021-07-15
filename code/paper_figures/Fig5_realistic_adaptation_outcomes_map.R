@@ -76,6 +76,10 @@ world1 <- world %>%
   left_join(data, by=c("sovereign_iso3"="sovereign_iso3")) %>% 
   filter(!is.na(outcome) & !is.na(rcp))
 
+# Export data for Anna Cabre <annanusca@gmail.com>
+data_out <- data %>% 
+  filter(!is.na(outcome) & !is.na(rcp))
+write.csv(data_out, file="~/Desktop/Fig5_data.csv", row.names=F)
 
 
 # Plot data
