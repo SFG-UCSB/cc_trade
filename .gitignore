@@ -10,6 +10,7 @@ data/aquamaps/
 data/environmental/
 
 # Large data
+requests
 data/gaines/raw
 data/gaines/gaines_data_for_eez_analysis.Rds
 data/gaines/gaines_eez_msy_time_series.Rdata
